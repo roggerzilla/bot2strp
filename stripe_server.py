@@ -85,6 +85,7 @@ async def crear_sesion(request: Request):
                 "quantity": 1
             }],
             mode="payment",
+            allow_promotion_codes=True,
             success_url="https://t.me/spicyvideos96bot",  # URL de éxito para este bot
             cancel_url="https://t.me/spicyvideos96bot",   # URL de cancelación para este bot
             metadata={
