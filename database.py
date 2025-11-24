@@ -130,7 +130,7 @@ async def add_generation_job(user_id: int, chat_id: int, message_id: int, filepa
         'priority_level': priority_level
     }
     try:
-        response = supabase.table("generation_queue3").insert(job_data).execute()
+        response = supabase.table("generation_queue2").insert(job_data).execute()
         if response.data:
             logging.info(f"Trabajo de generación para {user_id} añadido a la cola persistente con prioridad {priority_level}. ID: {response.data[0]['id']}.")
             return response.data[0]['id'] # Retorna el ID UUID del trabajo insertado
@@ -149,7 +149,7 @@ async def get_next_generation_job():
         # 1. Seleccionar el trabajo más prioritario y más antiguo que esté 'pending'
         # Usamos .rpc('get_next_job_and_mark_processing') si tuvieras una función RPC para esto,
         # pero para el estilo actual, lo haremos en dos pasos.
-        response = supabase.table("generation_queue3") \
+        response = supabase.table("generation_queue2") \
             .select('*') \
             .eq('status', 'pending') \
             .order('priority_level', asc=True) \
@@ -165,7 +165,7 @@ async def get_next_generation_job():
 
         # 2. Intentar actualizar el estado a 'processing' de forma transaccional/atómica
         # Se usa 'eq('status', 'pending')' para asegurar que solo se actualice si el estado aún es 'pending'.
-        update_response = supabase.table("generation_queue3") \
+        update_response = supabase.table("generation_queue2") \
             .update({'status': 'processing', 'started_at': datetime.now().isoformat()}) \
             .eq('id', job_id) \
             .eq('status', 'pending') \
@@ -201,7 +201,7 @@ async def update_generation_job_status(job_id: str, status: str, output_files_ur
 
 
     try:
-        response = supabase.table("generation_queue3").update(update_data).eq('id', job_id).execute()
+        response = supabase.table("generation_queue2").update(update_data).eq('id', job_id).execute()
         if response.data:
             logging.info(f"Estado del trabajo {job_id} actualizado a {status}.")
         else:
@@ -215,7 +215,7 @@ async def get_uncompleted_processing_jobs():
     (ej. por un crash del worker), para que puedan ser marcados como fallidos y se reembolsen.
     """
     try:
-        response = supabase.table("generation_queue3") \
+        response = supabase.table("generation_queue2") \
             .select('id, user_id, chat_id, filepath, selected_workflow_name') \
             .eq('status', 'processing') \
             .execute()
