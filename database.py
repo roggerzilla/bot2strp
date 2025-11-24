@@ -24,7 +24,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def get_user(user_id: int):
     """Obtiene datos de un usuario por su ID de Telegram."""
     try:
-        response = supabase.table("users3").select("*").eq("user_id", user_id).execute()
+        response = supabase.table("users2").select("*").eq("user_id", user_id).execute()
         data = response.data
         return data[0] if data else None
     except Exception as e:
@@ -46,7 +46,7 @@ def add_user(user_id: int, referred_by=None, initial_points=0):
         "priority_level": 2 # Prioridad por defecto: 2 (Normal/Baja), debe coincidir con el DEFAULT en SQL
     }
     try:
-        response = supabase.table("users3").insert(data).execute()
+        response = supabase.table("users2").insert(data).execute()
         if response.data:
             logging.info(f"Usuario {user_id} añadido a la BD. Puntos: {initial_points}, Prioridad: 2.")
             return True
@@ -65,7 +65,7 @@ def update_user_points(user_id: int, amount: int):
 
     new_points = user["points"] + amount
     try:
-        response = supabase.table("users3").update({"points": new_points}).eq("user_id", user_id).execute()
+        response = supabase.table("users2").update({"points": new_points}).eq("user_id", user_id).execute()
         if response.data:
             logging.info(f"Puntos de usuario {user_id} actualizados en {amount} (total: {new_points}).")
             return response.data[0] # Retorna el usuario actualizado
@@ -100,7 +100,7 @@ def update_user_priority(user_id: int, new_priority_level: int):
     
     if new_priority_level < current_priority: # Si la nueva prioridad es MENOR (más alta)
         try:
-            response = supabase.table("users3").update({'priority_level': new_priority_level}).eq('user_id', user_id).execute()
+            response = supabase.table("users2").update({'priority_level': new_priority_level}).eq('user_id', user_id).execute()
             if response.data:
                 logging.info(f"Prioridad del usuario {user_id} actualizada de {current_priority} a {new_priority_level}.")
                 return True
