@@ -21,10 +21,10 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- Funciones para la tabla 'users' ---
-def get_user(user_id: int):
+def get_user(user_id: int, table_name: str = "users2"):
     """Obtiene datos de un usuario por su ID de Telegram."""
     try:
-        response = supabase.table("users2").select("*").eq("user_id", user_id).execute()
+        response = supabase.table(table_name).select("*").eq("user_id", user_id).execute()
         data = response.data
         return data[0] if data else None
     except Exception as e:
@@ -33,7 +33,7 @@ def get_user(user_id: int):
 
 def add_user(user_id: int, referred_by=None, initial_points=0):
     """Añade un nuevo usuario a la base de datos con puntos iniciales y prioridad por defecto."""
-    user = get_user(user_id)
+    user = get_user(user_id, table_name)
     if user:
         logging.warning(f"Usuario {user_id} ya existe. Saltando adición.")
         return False
@@ -56,16 +56,16 @@ def add_user(user_id: int, referred_by=None, initial_points=0):
         logging.warning(f"Error al añadir usuario {user_id} (puede que ya exista): {e}.")
         return False
 
-def update_user_points(user_id: int, amount: int):
+def update_user_points(user_id: int, amount: int, table_name: str = "users2"):
     """Actualiza los puntos de un usuario."""
-    user = get_user(user_id)
+    user = get_user(user_id, table_name)
     if not user:
         logging.warning(f"Usuario {user_id} no encontrado para actualizar puntos.")
         return None
 
     new_points = user["points"] + amount
     try:
-        response = supabase.table("users2").update({"points": new_points}).eq("user_id", user_id).execute()
+        response = supabase.table(table_name).update({"points": new_points}).eq("user_id", user_id).execute()
         if response.data:
             logging.info(f"Puntos de usuario {user_id} actualizados en {amount} (total: {new_points}).")
             return response.data[0] # Retorna el usuario actualizado
@@ -77,21 +77,21 @@ def update_user_points(user_id: int, amount: int):
 
 def get_user_points(user_id: int) -> int:
     """Obtiene el saldo actual de puntos de un usuario."""
-    user = get_user(user_id)
+    user = get_user(user_id, table_name)
     return user["points"] if user else 0
 
 def get_user_priority(user_id: int) -> int:
     """Obtiene el nivel de prioridad actual de un usuario."""
-    user = get_user(user_id)
+    user = get_user(user_id, table_name)
     # Asume que 'priority_level' existe si el usuario existe, si no, usa el default 2
     return user.get("priority_level", 2) if user else 2
 
-def update_user_priority(user_id: int, new_priority_level: int):
+def update_user_priority(user_id: int, new_priority_level: int, table_name: str = "users2"):
     """
     Actualiza el nivel de prioridad de un usuario si el 'new_priority_level' es "mejor" (numéricamente menor)
     que el actual.
     """
-    user = get_user(user_id)
+    user = get_user(user_id, table_name)
     if not user:
         logging.warning(f"Usuario {user_id} no encontrado para actualizar prioridad.")
         return False
@@ -100,7 +100,7 @@ def update_user_priority(user_id: int, new_priority_level: int):
     
     if new_priority_level < current_priority: # Si la nueva prioridad es MENOR (más alta)
         try:
-            response = supabase.table("users2").update({'priority_level': new_priority_level}).eq('user_id', user_id).execute()
+            response = supabase.table(table_name).update({'priority_level': new_priority_level}).eq('user_id', user_id).execute()
             if response.data:
                 logging.info(f"Prioridad del usuario {user_id} actualizada de {current_priority} a {new_priority_level}.")
                 return True
