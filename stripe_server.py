@@ -84,6 +84,12 @@ async def crear_sesion(request: Request):
         logging.error(f"Error al crear la sesión: {e}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.post("/webhook/stripe")
+async def legacy_stripe_webhook(request: Request, stripe_signature: str = Header(None, alias="Stripe-Signature")):
+    # Ruta de compatibilidad para el bot antiguo que no enviaba {project} en la URL
+    # Redirigimos internamente a la lógica pasándole "monkeyvideos" (que usa users2)
+    return await stripe_webhook("monkeyvideos", request, stripe_signature)
+
 @app.post("/webhook/stripe/{project}")
 async def stripe_webhook(project: str, request: Request, stripe_signature: str = Header(None, alias="Stripe-Signature")):
     if project not in BOT_CONFIGS:
@@ -107,7 +113,7 @@ async def stripe_webhook(project: str, request: Request, stripe_signature: str =
         session = event["data"]["object"]
         metadata = session.get("metadata", {})
         
-        event_project = metadata.get("project")
+        event_project = metadata.get("project", "monkeyvideos") # Por defecto, si no hay project, es el bot antiguo (monkeyvideos)
         if event_project != project:
             return JSONResponse(status_code=200, content={"status": "ignored", "reason": "project_mismatch"})
 
