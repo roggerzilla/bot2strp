@@ -35,9 +35,9 @@ PURCHASE_OFFERS = {
     "p_19_99": {"label": "5000 Points ($19.99 USD)", "amount": 1999, "points": 5000, "priority_days": 30, "type": "one_time"},
     "p_50_00": {"label": "14000 Points ($50.00 USD)", "amount": 5000, "points": 14000, "priority_days": 60, "type": "one_time"},
     # Subscriptions
-    "sub_9_99": {"label": "2300 Points - Sub Monthly ($9.99 USD)", "amount": 999, "points": 2300, "priority_days": 15, "type": "subscription"},
-    "sub_19_99": {"label": "5750 Points - Sub Monthly ($19.99 USD)", "amount": 1999, "points": 5750, "priority_days": 30, "type": "subscription"},
-    "sub_50_00": {"label": "16100 Points - Sub Monthly ($50.00 USD)", "amount": 5000, "points": 16100, "priority_days": 60, "type": "subscription"},
+    "sub_9_99": {"label": "2300 Points - Sub Monthly ($9.99 USD)", "amount": 999, "points": 2300, "priority_days": 15, "type": "subscription", "price_id": "price_1TLvOMAuyjJEMmnKsXgiPdPW"},
+    "sub_19_99": {"label": "5750 Points - Sub Monthly ($19.99 USD)", "amount": 1999, "points": 5750, "priority_days": 30, "type": "subscription", "price_id": "price_1TLvNtAuyjJEMmnK2WiUoX2d"},
+    "sub_50_00": {"label": "16100 Points - Sub Monthly ($50.00 USD)", "amount": 5000, "points": 16100, "priority_days": 60, "type": "subscription", "price_id": "price_1TLvOfAuyjJEMmnK0UvCiBEa"},
 }
 
 @app.post("/crear-sesion")
@@ -62,22 +62,27 @@ async def crear_sesion(request: Request):
         return JSONResponse(status_code=500, content={"error": "Clave de Stripe no configurada para este proyecto."})
 
     try:
-        price_data = {
-            "currency": "usd",
-            "unit_amount": paquete["amount"],
-            "product_data": {
-                "name": paquete["label"]
+        line_item = {"quantity": 1}
+        
+        # Si configuras un 'price_id' de Stripe en el paquete, lo usará y permitirá restringir cupones.
+        if "price_id" in paquete:
+            line_item["price"] = paquete["price_id"]
+        else:
+            # Modalidad al vuelo (legacy)
+            price_data = {
+                "currency": "usd",
+                "unit_amount": paquete["amount"],
+                "product_data": {
+                    "name": paquete["label"]
+                }
             }
-        }
-        if is_subscription:
-            price_data["recurring"] = {"interval": "month"}
+            if is_subscription:
+                price_data["recurring"] = {"interval": "month"}
+            line_item["price_data"] = price_data
 
         session = stripe.checkout.Session.create(
             api_key=config["stripe_secret"],
-            line_items=[{
-                "price_data": price_data,
-                "quantity": 1
-            }],
+            line_items=[line_item],
             mode="subscription" if is_subscription else "payment",
             allow_promotion_codes=True,
             success_url=f"https://t.me/{project}",
