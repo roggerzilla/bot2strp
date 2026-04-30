@@ -29,6 +29,8 @@ BOT_CONFIGS = {
 }
 
 PURCHASE_OFFERS = { 
+    # Special Offers
+    "p_1_00": {"label": "Special: 159 Points ($1.00 USD)", "amount": 100, "points": 159, "priority_days": 1, "type": "one_time"},
     # One-time
     "p_3_99": {"label": "500 Points ($3.99 USD)", "amount": 399, "points": 500, "priority_days": 7, "type": "one_time"},
     "p_9_99": {"label": "2000 Points ($9.99 USD)", "amount": 999, "points": 2000, "priority_days": 15, "type": "one_time"},
