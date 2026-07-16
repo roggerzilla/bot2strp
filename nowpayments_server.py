@@ -137,6 +137,9 @@ async def crear_pago(request: Request):
         # ni un paquete de $3.99 llega al mínimo, ni pagando en la misma moneda
         # que cobramos. No dependemos del ajuste del panel.
         "is_fixed_rate": False,
+        # Ambos van explícitos porque los dos suben el mínimo si están activos,
+        # y omitirlos deja que mande el default de la cuenta, que no controlamos.
+        "is_fee_paid_by_user": False,
         "order_id": order_id,
         "order_description": package["label"],
         "ipn_callback_url": f"{PUBLIC_BASE_URL}/webhook/nowpayments",
