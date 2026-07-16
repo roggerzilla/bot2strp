@@ -46,11 +46,11 @@ BOT_CONFIGS = {
 }
 
 PURCHASE_OFFERS = {
-    # Oferta de entrada, sólo primera compra. Subida de $1.00 a $3.00: el mínimo
-    # de NOWPayments es ~$2 en la mitad de las monedas y $3-5 en el resto, así
-    # que un pago de $1 fallaría o quedaría corto sin reembolso posible.
+    # Oferta de entrada, sólo primera compra. $1.50 y no $1.00: con tarifa
+    # flotante el mínimo más alto de las monedas activas es DOGE a $1.14
+    # (BTC $1.06). A $1.50 entra con todas; a $1.00 fallarían esas dos.
     # Mantiene el ratio original de 159 pts/$.
-    "p_3_00":  {"label": "Special: 477 Points ($3.00 USD)",  "amount": 3.00,  "points": 477,   "priority_days": 1,  "first_buy_only": True},
+    "p_1_50":  {"label": "Special: 239 Points ($1.50 USD)",  "amount": 1.50,  "points": 239,   "priority_days": 1,  "first_buy_only": True},
     "p_3_99":  {"label": "400 Points ($3.99 USD)",           "amount": 3.99,  "points": 400,   "priority_days": 7},
     "p_9_99":  {"label": "2000 Points ($9.99 USD)",          "amount": 9.99,  "points": 2000,  "priority_days": 15},
     "p_19_99": {"label": "5000 Points ($19.99 USD)",         "amount": 19.99, "points": 5000,  "priority_days": 30},
@@ -132,6 +132,11 @@ async def crear_pago(request: Request):
         # momento del pago, así la volatilidad no nos afecta.
         "price_amount": package["amount"],
         "price_currency": "usd",
+        # Tarifa flotante, explícito y a propósito. La fija congela el cambio 20
+        # minutos, cobra un 1% extra y exige mínimos MUCHO más altos: con ella
+        # ni un paquete de $3.99 llega al mínimo, ni pagando en la misma moneda
+        # que cobramos. No dependemos del ajuste del panel.
+        "is_fixed_rate": False,
         "order_id": order_id,
         "order_description": package["label"],
         "ipn_callback_url": f"{PUBLIC_BASE_URL}/webhook/nowpayments",
