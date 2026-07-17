@@ -45,16 +45,23 @@ BOT_CONFIGS = {
     # "img2img": {...},
 }
 
+# El catálogo empieza en $14.99 porque el balance principal de la cuenta es
+# USDT-TRC20 y eso impone un suelo de ~$11.80: ni el propio wizard de NOWPayments
+# puede crear un pago de $10 (factura 4424233468). Verificado a mano: de $14.99
+# para arriba pasan, $9.99 no.
+#
+# PROMO DE LANZAMIENTO: puntos inflados un 25% para incentivar la primera compra
+# (que además genera el saldo necesario para convertir el balance a USDCMATIC).
+# Valores base a los que volver: 3400 / 5000 / 14000.
+#
+# Cuando el balance principal sea USDCMATIC, vuelven los paquetes bajos:
+#   "p_1_50":  {"label": "Special: 239 Points ($1.50 USD)", "amount": 1.50, "points": 239,  "priority_days": 1, "first_buy_only": True},
+#   "p_3_99":  {"label": "400 Points ($3.99 USD)",          "amount": 3.99, "points": 400,  "priority_days": 7},
+#   "p_9_99":  {"label": "2000 Points ($9.99 USD)",         "amount": 9.99, "points": 2000, "priority_days": 15},
 PURCHASE_OFFERS = {
-    # Oferta de entrada, sólo primera compra. $1.50 y no $1.00: con tarifa
-    # flotante el mínimo más alto de las monedas activas es DOGE a $1.14
-    # (BTC $1.06). A $1.50 entra con todas; a $1.00 fallarían esas dos.
-    # Mantiene el ratio original de 159 pts/$.
-    "p_1_50":  {"label": "Special: 239 Points ($1.50 USD)",  "amount": 1.50,  "points": 239,   "priority_days": 1,  "first_buy_only": True},
-    "p_3_99":  {"label": "400 Points ($3.99 USD)",           "amount": 3.99,  "points": 400,   "priority_days": 7},
-    "p_9_99":  {"label": "2000 Points ($9.99 USD)",          "amount": 9.99,  "points": 2000,  "priority_days": 15},
-    "p_19_99": {"label": "5000 Points ($19.99 USD)",         "amount": 19.99, "points": 5000,  "priority_days": 30},
-    "p_50_00": {"label": "14000 Points ($50.00 USD)",        "amount": 50.00, "points": 14000, "priority_days": 60},
+    "p_14_99": {"label": "4250 Points ($14.99 USD)",         "amount": 14.99, "points": 4250,  "priority_days": 15},
+    "p_19_99": {"label": "6250 Points ($19.99 USD)",         "amount": 19.99, "points": 6250,  "priority_days": 30},
+    "p_50_00": {"label": "17500 Points ($50.00 USD)",        "amount": 50.00, "points": 17500, "priority_days": 60},
     # Las suscripciones sub_9_99 / sub_19_99 / sub_50_00 se eliminaron: una
     # invoice de crypto es un pago único, no hay tarjeta que cobrar cada mes.
 }
