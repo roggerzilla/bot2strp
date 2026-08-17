@@ -24,7 +24,9 @@ API = "https://api.nowpayments.io/v1"
 KEY = os.environ.get("NOWPAYMENTS_API_KEY")
 
 # Las monedas que quieres ofrecer a tus usuarios.
-COINS = ["btc", "eth", "usdttrc20", "usdterc20", "usdcmatic", "ltc", "trx", "bnbbsc", "sol", "doge"]
+# usdtbsc es la que usa Motion Mouse, que sí consigue cobrar $9.99.
+COINS = ["usdtbsc", "usdcbsc", "usdcmatic", "usdterc20", "usdttrc20",
+         "btc", "eth", "ltc", "trx", "bnbbsc", "sol", "doge"]
 
 
 def fetch_min(client, frm, to, fixed=False):

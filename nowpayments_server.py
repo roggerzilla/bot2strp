@@ -38,11 +38,28 @@ BOT_CONFIGS = {
     "monkeyvideos": {
         "bot_token": os.environ.get("BOT_TOKEN_MONKEY", os.environ.get("BOT_TOKEN")),
         "tg_username": "monkeyvideosbot",
+        "pool": "users2",   # confirma con nowpayments_confirm (users2 + clones)
     },
-    # Pendientes de migrar. Hoy videos_2_videos e img_2_img declaran AMBOS el
-    # identificador "videos2videos": hay que separarlos antes de activarlos.
-    # "videos2videos": {...},
-    # "img2img": {...},
+    # videos_2_videos (tabla usersv2v, sin clones).
+    "v2v": {
+        "bot_token": os.environ.get("BOT_TOKEN_V2V"),
+        "tg_username": os.environ.get("TG_USERNAME_V2V", "videosSound151666bot"),
+        "pool": "usersv2v",  # confirma con nowpayments_confirm_v2v
+    },
+    # img_2_img (tabla users4, sin clones). Bot independiente.
+    "img4": {
+        "bot_token": os.environ.get("BOT_TOKEN_IMG"),
+        "tg_username": os.environ.get("TG_USERNAME_IMG", "imagenesmonkey994bot"),
+        "pool": "users4",  # confirma con nowpayments_confirm_img
+    },
+    # text_2_videos: saldo y clones totalmente separados de monkeyvideos.
+    "t2v2": {
+        "bot_token": os.environ.get("BOT_TOKEN_T2V2"),
+        # Puede ser el @username del nuevo bot de Stars; sólo se usa como URL
+        # de regreso después de pagar con cripto.
+        "tg_username": os.environ.get("TG_USERNAME_T2V2", "").strip().lstrip("@"),
+        "pool": "users_t2v2",  # confirma con nowpayments_confirm_t2v2
+    },
 }
 
 # El catálogo empieza en $14.99 porque el balance principal de la cuenta es
@@ -99,7 +116,17 @@ async def notify(bot_token: str, chat_id: int, text: str) -> None:
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "projects": {
+            name: {
+                "pool": cfg["pool"],
+                "bot_token_configured": bool(cfg.get("bot_token")),
+                "tg_username_configured": bool(cfg.get("tg_username")),
+            }
+            for name, cfg in BOT_CONFIGS.items()
+        },
+    }
 
 
 @app.post("/crear-pago")
@@ -115,6 +142,16 @@ async def crear_pago(request: Request):
         return JSONResponse(status_code=400, content={"error": "Paquete no válido."})
     if not NOWPAYMENTS_API_KEY:
         return JSONResponse(status_code=500, content={"error": "NOWPAYMENTS_API_KEY no configurada."})
+    project_config = BOT_CONFIGS[project]
+    if not project_config.get("bot_token"):
+        return JSONResponse(status_code=500, content={
+            "error": f"Token de Telegram no configurado para el proyecto {project}."
+        })
+    tg = project_config["tg_username"]
+    if not tg:
+        return JSONResponse(status_code=500, content={
+            "error": f"TG_USERNAME_{project.upper()} no configurado en el backend."
+        })
 
     try:
         user_id = int(data.get("telegram_user_id"))
@@ -124,8 +161,15 @@ async def crear_pago(request: Request):
     package = PURCHASE_OFFERS[package_id]
 
     # El gating de primera compra se revalida aquí: el cliente no es de fiar.
-    if package.get("first_buy_only") and db.has_purchased(user_id, clone_id):
-        return JSONResponse(status_code=400, content={"error": "Esta oferta es sólo para tu primera compra."})
+    if package.get("first_buy_only"):
+        pool = BOT_CONFIGS[project]["pool"]
+        already_purchased = (
+            db.has_purchased_t2v2(user_id, clone_id)
+            if pool == "users_t2v2"
+            else db.has_purchased(user_id, clone_id)
+        )
+        if already_purchased:
+            return JSONResponse(status_code=400, content={"error": "Esta oferta es sólo para tu primera compra."})
 
     order_id = db.new_order_id()
     if not db.create_pending_payment(order_id, project, user_id, clone_id, package_id,
@@ -133,7 +177,6 @@ async def crear_pago(request: Request):
                                      package["priority_days"]):
         return JSONResponse(status_code=500, content={"error": "No se pudo registrar la compra."})
 
-    tg = BOT_CONFIGS[project]["tg_username"]
     payload = {
         # price_currency usd: NOWPayments calcula el equivalente en crypto al
         # momento del pago, así la volatilidad no nos afecta.
@@ -206,11 +249,20 @@ async def nowpayments_webhook(request: Request, x_nowpayments_sig: str = Header(
         logging.error(f"IPN 'finished' para un order_id desconocido: {order_id}")
         return JSONResponse(status_code=200, content={"status": "ignorado", "reason": "order desconocido"})
 
+    # Enrutar según el pool del proyecto.
+    pool = BOT_CONFIGS.get(row["project"], {}).get("pool", "users2")
     try:
-        result = db.confirm(order_id, payment_id, body.get("pay_currency"), body.get("actually_paid"))
+        if pool == "usersv2v":
+            result = db.confirm_v2v(order_id, payment_id, body.get("pay_currency"), body.get("actually_paid"))
+        elif pool == "users4":
+            result = db.confirm_img(order_id, payment_id, body.get("pay_currency"), body.get("actually_paid"))
+        elif pool == "users_t2v2":
+            result = db.confirm_t2v2(order_id, payment_id, body.get("pay_currency"), body.get("actually_paid"))
+        else:
+            result = db.confirm(order_id, payment_id, body.get("pay_currency"), body.get("actually_paid"))
     except Exception as e:
         # 500 a propósito: que NOWPayments reintente. No se abonó nada.
-        logging.error(f"nowpayments_confirm falló (order {order_id}): {e}", exc_info=True)
+        logging.error(f"nowpayments_confirm falló (order {order_id}, pool {pool}): {e}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": "error interno"})
 
     if not result.get("awarded"):

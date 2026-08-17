@@ -79,6 +79,40 @@ def confirm(order_id: str, payment_id: str, pay_currency: str, actually_paid):
     return resp.data[0] if resp.data else {"awarded": False}
 
 
+def confirm_v2v(order_id: str, payment_id: str, pay_currency: str, actually_paid):
+    """Confirmación para el pool usersv2v (videos_2_videos + img_2_img). Sin
+    clones ni comisiones. Devuelve {awarded, r_user_id, r_points}."""
+    resp = supabase.rpc("nowpayments_confirm_v2v", {
+        "p_order_id": order_id,
+        "p_payment_id": payment_id,
+        "p_pay_currency": pay_currency,
+        "p_actually_paid": actually_paid,
+    }).execute()
+    return resp.data[0] if resp.data else {"awarded": False}
+
+
+def confirm_img(order_id: str, payment_id: str, pay_currency: str, actually_paid):
+    """Confirmación para el pool users4 (img_2_img). Sin clones."""
+    resp = supabase.rpc("nowpayments_confirm_img", {
+        "p_order_id": order_id,
+        "p_payment_id": payment_id,
+        "p_pay_currency": pay_currency,
+        "p_actually_paid": actually_paid,
+    }).execute()
+    return resp.data[0] if resp.data else {"awarded": False}
+
+
+def confirm_t2v2(order_id: str, payment_id: str, pay_currency: str, actually_paid):
+    """Confirmación clone-aware para text-to-video, aislada en users_t2v2."""
+    resp = supabase.rpc("nowpayments_confirm_t2v2", {
+        "p_order_id": order_id,
+        "p_payment_id": payment_id,
+        "p_pay_currency": pay_currency,
+        "p_actually_paid": actually_paid,
+    }).execute()
+    return resp.data[0] if resp.data else {"awarded": False}
+
+
 def touch_status(order_id: str, payment_id: str, status: str) -> None:
     try:
         supabase.rpc("nowpayments_touch_status", {
@@ -107,6 +141,17 @@ def has_purchased(user_id: int, clone_id: str) -> bool:
         return bool(resp.data and resp.data[0].get("has_purchased"))
     except Exception as e:
         logging.error(f"has_purchased falló ({user_id}): {e}")
+        return False
+
+
+def has_purchased_t2v2(user_id: int, clone_id: str) -> bool:
+    """Gating de primera compra exclusivamente para users_t2v2."""
+    try:
+        resp = supabase.table("users_t2v2").select("has_purchased").eq(
+            "user_id", user_id).eq("clone_id", clone_id or NIL_CLONE).execute()
+        return bool(resp.data and resp.data[0].get("has_purchased"))
+    except Exception as e:
+        logging.error(f"has_purchased_t2v2 falló ({user_id}): {e}")
         return False
 
 
